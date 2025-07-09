@@ -1,0 +1,40 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Vehicles {
+  vehicle_id   Int    @id @default(autoincrement())
+  type_vehicle String
+  soat         Soats[]
+}
+
+model Ages {
+  age_id Int    @id @default(autoincrement())
+  age    String
+  soat   Soats[]
+}
+
+model Subtypes {
+  subtype_id Int    @id @default(autoincrement())
+  type       String
+  soat       Soats[]
+}
+
+model Soats {
+  soat_id    Int      @id @default(autoincrement())
+  vehicle_id Int
+  vehicle    Vehicles  @relation(fields: [vehicle_id], references: [vehicle_id])
+  subtype_id Int?
+  subtype    Subtypes? @relation(fields: [subtype_id], references: [subtype_id])
+  age_id     Int?
+  age        Ages?     @relation(fields: [age_id], references: [age_id])
+  cost       Int
+}

@@ -1,0 +1,209 @@
+base de datos 
+// Prisma Schema
+model VehicleType {
+  id        Int       @id @default(autoincrement())
+  name      String
+  subtypes  SubType[]
+}
+
+model SubType {
+  id          Int       @id @default(autoincrement())
+  name        String
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  vehicleTypeId Int
+  ageGroups   AgeGroup[]
+}
+
+model AgeGroup {
+  id        Int     @id @default(autoincrement())
+  name      String
+  costs     Cost[]
+}
+
+model Cost {
+  id          Int       @id @default(autoincrement())
+  amount      Float
+  vehicleType VehicleType @relation(fields: [vehicleTypeId], references: [id])
+  vehicleTypeId Int
+  subType     SubType @relation(fields: [subTypeId], references: [id])
+  subTypeId   Int
+  ageGroup    AgeGroup @relation(fields: [ageGroupId], references: [id])
+  ageGroupId  Int
+}
+
+
+// seed.js
+
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+async function main() {
+  // Insertar tipos de vehículo
+  const motos = await prisma.vehicleType.create({
+    data: { name: 'MOTOS' },
+  });
+  const camperos = await prisma.vehicleType.create({
+    data: { name: 'CAMPEROS Y CAMIONETAS' },
+  });
+
+  // Insertar subtipos para Motos
+  const ciclomotor = await prisma.subType.create({
+    data: {
+      name: 'Ciclomotor',
+      vehicleTypeId: motos.id,
+    },
+  });
+  const menosDe100cc = await prisma.subType.create({
+    data: {
+      name: 'Menos de 100 c.c.',
+      vehicleTypeId: motos.id,
+    },
+  });
+
+  // Insertar grupos de edad para Motos
+  const grupo0a9 = await prisma.ageGroup.create({
+    data: { name: '0 a 9 años' },
+  });
+
+  // Insertar costos
+  await prisma.cost.create({
+    data: {
+      amount: 117900,
+      vehicleTypeId: motos.id,
+      subTypeId: ciclomotor.id,
+      ageGroupId: grupo0a9.id,
+    },
+  });
+
+  // Puedes continuar agregando más datos según el patrón anterior
+}
+
+main()
+  .catch(e => {
+    throw e
+  })
+  .finally(async () => {
+    await prisma.$disconnect()
+  })
+
+
+
+-----------------------------------------------------------------------------------------
+
+// Ejemplo con diferentes condiciones de vehículos, subtipo y tiempo
+async function obtenerCosto(vehiculo, subtipo, tiempo) {
+  const condicion = await prisma.condicionCosto.findFirst({
+    where: {
+      vehiculo: vehiculo,
+      subtipo: subtipo,
+      tiempo: tiempo,
+    },
+  });
+
+  if (condicion) {
+    return condicion.costo; 
+  } else {
+    return 'Condición no válida';
+  }
+}
+
+// Probar con otros ejemplos
+(async () => {
+  console.log(await obtenerCosto('CAMPEROS Y CAMIONETAS', 'Menos de 1500 c.c.', '0 a 9 años')); // 789.600
+  console.log(await obtenerCosto('CAMPEROS Y CAMIONETAS', '1500 a 2500', '10 años o mas')); // 1.116.800
+  console.log(await obtenerCosto('CAMPEROS Y CAMIONETAS', 'Más de 2500 c.c.', '0 a 9 años')); // 1.105.900
+  console.log(await obtenerCosto('CAMPEROS Y CAMIONETAS', 'Más de 2500 c.c.', '15 años')); // Condición no válida
+})();
+
+
+consulta a la base de datos 
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+async function obtenerCosto(vehiculo, subtipo, tiempo) {
+  // Consulta en la base de datos para obtener el costo
+  const condicion = await prisma.condicionCosto.findFirst({
+    where: {
+      vehiculo: vehiculo,
+      subtipo: subtipo,
+      tiempo: tiempo,
+    },
+  });
+
+  // Verificamos si encontramos una coincidencia
+  if (condicion) {
+    return condicion.costo;  // Retornamos el costo correspondiente
+  } else {
+    return 'Condición no válida'; // Si no se encuentra, retornamos un mensaje de error
+  }
+}
+
+// Ejemplo de uso:
+(async () => {
+  const costo = await obtenerCosto('CAMPEROS Y CAMIONETAS', 'Menos de 1500 c.c.', '0 a 9 años');
+  console.log(costo);  // Debería retornar 789.600
+})();
+
+
+
+----------------------------------------------------------------------------------------------
+Select con traido de la base de datos 
+
+// pages/index.js (o cualquier archivo de tu proyecto)
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+export async function getServerSideProps() {
+  // Consulta los datos de la base de datos
+  const categorias = await prisma.categoria.findMany();
+
+  // Devuelve los datos para que estén disponibles en el componente
+  return {
+    props: {
+      categorias, // Pasamos las categorías como prop
+    },
+  };
+}
+
+export default function Home({ categorias }) {
+  const [componenteSeleccionado, setComponenteSeleccionado] = React.useState("");
+
+  const handleChange = (event) => {
+    setComponenteSeleccionado(event.target.value);
+  };
+
+  return (
+    <div>
+      <h1>Selecciona una categoría</h1>
+      <select value={componenteSeleccionado} onChange={handleChange}>
+        <option value="">Selecciona...</option>
+        {categorias.map((categoria) => (
+          <option key={categoria.id} value={categoria.id}>
+            {categoria.nombre}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+
+
+
+
+---------------------------------------------------------------------------------------------------------------------
+
+
+Datos de Prisma para hacer otroa archivo de base de datos 
+<// generator client {
+//   provider = "prisma-client-js"
+//   output   = "../src/generated/prisma" --> estan linea es para crear la base de datos en un lugar predeterminado 
+// }
+
+// datasource db {
+//   provider = "sqlite"
+//   url      = env("DATABASE_URL")
+// }
